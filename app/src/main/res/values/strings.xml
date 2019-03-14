@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">retoMaps</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="userPosition">Your position are:</string>
+    <string name="customPosition">"The marker position are: "</string>
+    <string name="distance">"The distance between you and the marker are: "</string>
+    <string name="currentPlace">You are in the place of the marker</string>
+</resources>
