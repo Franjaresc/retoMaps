@@ -5,5 +5,9 @@
     <string name="title_activity_maps">Map</string>
     <string name="customPosition">"The marker position are: "</string>
     <string name="distance">"The distance between you and the marker are: "</string>
-    <string name="currentPlace">" You are in the place of the marker"</string>
+    <string name="currentPlace">" You are in the place of the marker "</string>
+    <string name="bnt_SaveLocation">Save location</string>
+    <string name="nearPlace">"The nearest place is "</string>
+    <string name="btn_ClearMarkers">Clear saved markers</string>
+    <string name="btn_ShowSavedMarkers">Show saved markers</string>
 </resources>

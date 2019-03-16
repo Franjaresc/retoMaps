@@ -10,18 +10,25 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener {
 
@@ -31,9 +38,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LocationManager manager;
     private Marker personalMarker, customPositionMarker;
     private LatLng personalPosition,customPosition;
+    private ArrayList<LatLng> customPositions;
     private List<Address> personalAddress,customAddress;
     private Location userLocation,customLocation;
     private TextView txt_Description;
+    private Button btn_SaveLocation,btn_ClearMarkers,btn_ShowSavedMarkers;
+    private ArrayList<Marker> savedMarkers;
+
+
+
 
 
     //public interface listener
@@ -48,8 +61,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
         manager = (LocationManager) getSystemService(LOCATION_SERVICE);
         geocoder = new Geocoder(this, Locale.getDefault());
-        //solicitar permisos
+        savedMarkers=new ArrayList<>();
+        customPositions = new ArrayList<>();
         txt_Description = findViewById(R.id.txt_Description);
+        btn_SaveLocation = findViewById(R.id.btn_SaveLocation);
+        btn_SaveLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(customPosition!=null){
+                    customPositions.add(customPosition);
+                    getNearLocation();
+                }
+            }
+        });
+        btn_ClearMarkers=findViewById(R.id.btn_ClearMarkers);
+        btn_ClearMarkers.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clearAllSavePlaces();
+            }
+        });
+        btn_ShowSavedMarkers = findViewById(R.id.btn_ShowSavedMarkers);
+        btn_ShowSavedMarkers.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAllSavePlaces();
+            }
+        });
 
         ActivityCompat.requestPermissions(this, new String[]{
                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -68,19 +106,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LocationListener locationListener = new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
-            userLocation=location;
-            personalPosition = null;
-            personalPosition = new LatLng(location.getLatitude(), location.getLongitude());
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(personalPosition));
-            personalMarker.setPosition(personalPosition);
-            try {
-                personalAddress = geocoder.getFromLocation(location.getLatitude(),location.getLongitude(),1);
-                String addres = personalAddress.get(0).getAddressLine(0).split(",")[0];
-                personalMarker.setTitle(getString(R.string.userPosition)+addres);
+            if (personalMarker==null){
+                personalPosition = new LatLng(location.getLatitude(), location.getLongitude());
 
-            } catch (IOException e) {
-                Toast.makeText(MapsActivity.this,e.getMessage(), Toast.LENGTH_LONG).show();
+                try {
+                    personalAddress = geocoder.getFromLocation(location.getLatitude(),location.getLongitude(),1);
+                    String addres = personalAddress.get(0).getAddressLine(0);
+                    personalMarker = mMap.addMarker(new MarkerOptions().position(personalPosition).title(getString(R.string.userPosition)+addres));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLng(personalPosition));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
+            else{
+                userLocation=location;
+                personalPosition = null;
+                personalPosition = new LatLng(location.getLatitude(), location.getLongitude());
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(personalPosition,15));
+                personalMarker.setPosition(personalPosition);
+                try {
+                    personalAddress = geocoder.getFromLocation(location.getLatitude(),location.getLongitude(),1);
+                    String addres = personalAddress.get(0).getAddressLine(0).split(",")[0];
+                    personalMarker.setTitle(getString(R.string.userPosition)+addres);
+
+                } catch (IOException e) {
+                    Toast.makeText(MapsActivity.this,e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            }
+
 
 
         }
@@ -106,16 +159,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         mMap.setOnMapLongClickListener(this);
-        personalPosition = new LatLng(3.341757, -76.530808);
 
-        try {
-            personalAddress = geocoder.getFromLocation(3.341757,-76.530808,1);
-            String addres = personalAddress.get(0).getAddressLine(0);
-            personalMarker = mMap.addMarker(new MarkerOptions().position(personalPosition).title(getString(R.string.userPosition)+addres));
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(personalPosition));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
 
     }
@@ -140,26 +184,81 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         customLocation= new Location("custom Location");
         customLocation.setLongitude(latLng.longitude);
         customLocation.setLatitude(latLng.latitude);
-        double distance = userLocation.distanceTo(customLocation);
+        double distance = Math.round((userLocation.distanceTo(customLocation)*100))/100d;
         try {
             customAddress = geocoder.getFromLocation(latLng.latitude,latLng.longitude,1);
             String addres = customAddress.get(0).getAddressLine(0).split(",")[0];
             if (customPositionMarker==null){
-                customPositionMarker = mMap.addMarker(new MarkerOptions().position(customPosition).title(getString(R.string.userPosition)+addres));
-
+                customPositionMarker = mMap.addMarker(new MarkerOptions().position(customPosition).title(getString(R.string.customPosition)+addres).snippet(getString(R.string.distance)+distance+" m").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
             }
             else{
                 customPositionMarker.setPosition(latLng);
                 customPositionMarker.setTitle(getString(R.string.customPosition)+addres);
             }
-            if (distance<50){
-                txt_Description.setText(getString(R.string.currentPlace));
-            }
-            else{
-                txt_Description.setText(getString(R.string.distance)+distance);
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
+
+    public String getNearLocation(){
+        String nearLocation="";
+        List<Address> nearAddress=null;
+        double distance = Double.MAX_VALUE;
+        Location vLocation = new Location("variable location");
+        try {
+            for (int i = 0; i<customPositions.size();i++){
+                vLocation.setLatitude(customPositions.get(i).latitude);
+                vLocation.setLongitude(customPositions.get(i).longitude);
+                double vDistance = Math.round((userLocation.distanceTo(vLocation)*100)/100d);
+                if (vDistance<distance){
+                    nearAddress = geocoder.getFromLocation(vLocation.getLatitude(),vLocation.getLongitude(),1);
+                    distance=vDistance;
+                }
+
+            }
+            if (nearAddress!=null){
+                if (distance<100){
+                    String addres = nearAddress.get(0).getAddressLine(0).split(",")[0];
+                    txt_Description.setText(getString(R.string.currentPlace)+addres);
+                }
+                else{
+                    String addres = nearAddress.get(0).getAddressLine(0).split(",")[0];
+                    txt_Description.setText(getString(R.string.nearPlace)+addres);
+                }
+            }
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+
+
+        return nearLocation;
+    }
+
+    public void showAllSavePlaces(){
+        List<Address> nearAddress;
+        Location vLocation = new Location("variable location");
+        try {
+            for (int i = 0; i<customPositions.size();i++){
+                nearAddress = geocoder.getFromLocation(customPositions.get(i).latitude,customPositions.get(i).longitude,1);
+                vLocation.setLatitude(customPositions.get(i).latitude);
+                vLocation.setLongitude(customPositions.get(i).longitude);
+                double distance = Math.round((userLocation.distanceTo(vLocation)*100)/100d);
+                String addres = nearAddress.get(0).getAddressLine(0).split(",")[0];
+                Marker newMarker = mMap.addMarker(new MarkerOptions().position(customPositions.get(i)).icon((BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))).title(getString(R.string.customPosition)+addres).snippet(getString(R.string.distance)+distance+" m"));
+                savedMarkers.add(newMarker);
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+
+    }
+
+    public void clearAllSavePlaces(){
+        for (int i = 0; i<savedMarkers.size();i++){
+            savedMarkers.get(i).remove();
+        }
+    }
+
 }

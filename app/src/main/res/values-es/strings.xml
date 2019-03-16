@@ -6,4 +6,8 @@
     <string name="title_activity_maps">Mapa</string>
     <string name="distance">"La distancia entre tu y el marcador es: "</string>
     <string name="currentPlace">"Estás en el lugar del marcador "</string>
+    <string name="bnt_SaveLocation">Guardar direccion</string>
+    <string name="nearPlace">"El lugar más cercano es "</string>
+    <string name="btn_ClearMarkers">Limpiar marcadores guardados</string>
+    <string name="btn_ShowSavedMarkers">Mostrar marcadores guardados</string>
 </resources>
